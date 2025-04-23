@@ -282,12 +282,14 @@ int cyBot_readInt(void) {
                 uart_sendStr("\r\nMoving forward 10cm\r\n");
                 lcd_clear();
                 lcd_puts("Moving forward");
-                move_forward(sensor_data, 100);
+                dist_result = move_forward(sensor_data, 100)/10.0;
+                uart_sendStr("\r\nMoved forward %.2fcm\r\n", dist_result); // Print resulting forward movement
             } else if (cmd == 'x') {
                 uart_sendStr("\r\nMoving backward 10cm\r\n");
                 lcd_clear();
                 lcd_puts("Moving backward");
-                move_backwards(sensor_data, 100);
+                dist_result = move_backwards(sensor_data, 100)/10.0;
+                uart_sendStr("\r\nMoved backward %.2fcm\r\n", dist_result); // Print resulting backward movement
             } else if (cmd == 'a') {
                 uart_sendStr("\r\nTurning left 30 deg\r\n");
                 lcd_clear();
@@ -333,7 +335,7 @@ int cyBot_readInt(void) {
                 lcd_clear();
                 lcd_puts("Moving backward");
                 dist_result = move_backwards(sensor_data, custom_input)/10.0;
-                uart_sendStr("\r\nMoved backward %.2fcm\r\n", dist_result); // Print resulting forward movement
+                uart_sendStr("\r\nMoved backward %.2fcm\r\n", dist_result); // Print resulting backward movement
             } else if (cmd == 'l') { // Turn right custom amount
                 uart_sendStr("\r\nTurn how much right in cm?\r\n");
                 custom_input = cyBot_readInt(); // Get double digit int
