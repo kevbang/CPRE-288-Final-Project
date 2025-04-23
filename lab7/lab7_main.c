@@ -43,15 +43,15 @@ double convert_ir(int ir_raw) {
     return 157000.0 * pow(ir_raw, -1.176);
 }
 
-// Currently doing 4 scans
+// Changed to do 3 scans
 double get_average_ir_cm(int angle, cyBOT_Scan_t* scan) {
     int total = 0;
     int i;
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < 3; i++) {
         cyBOT_Scan(angle, scan);
         total += scan->IR_raw_val;
     }
-    return convert_ir(total / 4);
+    return convert_ir(total / 3);
 }
 
 void drive_to_target(object_t target) {
