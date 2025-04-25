@@ -22,20 +22,27 @@
 #include <stdbool.h>
 #include "driverlib/interrupt.h"
 
-
+extern volatile char command_byte; // byte value for special character used as a command
+extern volatile int command_flag; // flag to tell the main program a special command was received
 
 // UART1 device initialization for CyBot to PuTTY
-void uart_init(void);
+void uart_interrupt_init(void);
 
-// Send a character to CyBot via UART
+// Send a byte over UART1 from CyBot to PuTTY
 void uart_sendChar(char data);
 
-
-// Receive a character from UART
+// CyBot waits (i.e. blocks) to receive a byte from PuTTY
+// returns byte that was received by UART1
+// Not used with interrupts; see UART1_Handler
 char uart_receive(void);
 
+char uart_receive_nonBlocking(void);
 
-// Send a string to CyBot via UART
+// Send a string over UART1
+// Sends each char in the string one at a time
 void uart_sendStr(const char *data);
+
+// Interrupt handler for receive interrupts
+void UART1_Handler(void);
 
 #endif /* UART_H_ */

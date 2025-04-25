@@ -12,10 +12,17 @@ double move_forward(oi_t *sensor, double distance_mm) {
         oi_update(sensor);
         sum += sensor->distance;
 
-        if (sensor->bumpLeft || sensor->bumpRight) {
-            lcd_clear();
-            lcd_puts("Object bumped");
+        if (sensor->bumpLeft) {
             oi_setWheels(0, 0);
+            lcd_clear();
+            lcd_puts("Object bumped left");
+            uart_sendStr("\r\nObject bumped left side\r\n");
+            return sum;
+        } else if (sensor->bumpRight) {
+            oi_setWheels(0, 0);
+            lcd_clear();
+            lcd_puts("Object bumped right");
+            uart_sendStr("\r\nObject bumped right side\r\n");
             return sum;
         }
     }
@@ -33,10 +40,17 @@ double move_backwards(oi_t *sensor, double distance_mm) {
         oi_update(sensor);
         sum += fabs(sensor->distance);
 
-        if (sensor->bumpLeft || sensor->bumpRight) {
-            lcd_clear();
-            lcd_puts("Bumped while rev");
+        if (sensor->bumpLeft) {
             oi_setWheels(0, 0);
+            lcd_clear();
+            lcd_puts("Object bumped left");
+            uart_sendStr("\r\nObject bumped back left side\r\n");
+            return sum;
+        } else if (sensor->bumpRight) {
+            oi_setWheels(0, 0);
+            lcd_clear();
+            lcd_puts("Object bumped right");
+            uart_sendStr("\r\nObject bumped back right side\r\n");
             return sum;
         }
     }
