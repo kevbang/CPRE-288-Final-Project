@@ -168,17 +168,6 @@ void scan_objects() {
             detected_objects[i].width_cm);
         uart_sendStr(summary);
     }
-
-    // char summary[128];
-    // sprintf(summary, "\r\nSmallest object at angle %d, distance %.2f cm, width %.2f cm\r\n",
-    //     detected_objects[min_index].avg_angle,
-    //     detected_objects[min_index].ping_distance,
-    //     detected_objects[min_index].width_cm);
-    // uart_sendStr(summary);
-    // lcd_clear();
-    // lcd_printf("Target: %d deg", detected_objects[min_index].avg_angle);
-
-    // drive_to_target(detected_objects[min_index]);
 }
 
 #define BUF_SIZE  3 // Set up to only take 2 digits
