@@ -77,11 +77,11 @@ void ping_trigger (void){
 
     GPIO_PORTB_DIR_R |= (1 << 3);
     GPIO_PORTB_DATA_R &= ~(1 << 3); // set to low (0)
-    timer_waitMillis(200);
-
+    //timer_waitMillis(200);
+    timer_waitMicros(5); //wait 5 micro sec
     GPIO_PORTB_DATA_R |= (1 << 3); // set back to high (1)
-    timer_waitMillis(200);
-
+    //timer_waitMillis(200);
+    timer_waitMicros(5); //wait 5 micro sec
     GPIO_PORTB_DATA_R &= ~(1 << 3); // set back to low
 
     // Clear an interrupt that may have been erroneously triggered
@@ -94,20 +94,50 @@ void ping_trigger (void){
 }
 
 void TIMER3B_Handler(void){
-
-  // YOUR CODE HERE
-  // As needed, go back to review your interrupt handler code for the UART lab.
-  // What are the first lines of code in the ISR? Regardless of the device, interrupt handling
-  // includes checking the source of the interrupt and clearing the interrupt status bit.
-  // Checking the source: test the MIS bit in the MIS register (is the ISR executing
-  // because the input capture event happened and interrupts were enabled for that event?
-  // Clearing the interrupt: set the ICR bit (so that same event doesn't trigger another interrupt)
-  // The rest of the code in the ISR depends on actions needed when the event happens.
-
+  // Check if timer3b caused the interrupt
+  if(TIMER3_MIS_R & 0x400)
+  {
+      // Clear the interrupt flag
+      TIMER3_ICR_R |= 0x400;
+      // If state is low, read timer val on rising edge and set state to await falling edge
+      if (g_state == LOW)
+      {
+        g_start_time = TIMER3_TBR_R;
+        g_state = HIGH;
+      }
+      else if(g_state == HIGH) // If state is high, read timer val on falling edge and set state to done
+      {
+        g_end_time = TIMER3_TBR_R;
+        g_state = DONE;
+      }
+  }
 }
 
 float ping_getDistance (void){
 
-    // YOUR CODE HERE
+  unsigned long time_diff = 0;
+  float distance = 0;
 
+  uint8_t overflow = 0;
+
+  // Send trigger to start capture sequence
+  ping_trigger();
+
+  // Only move after both edges of interrupt
+  while(STATE != DONE){};
+
+  // Check for overflow, if end time > start time the timer has wrapped
+  overflow = END_TIME > START_TIME;
+
+  // Total tick difference, include one wrap if there was overflow
+  time_diff = (g_start_time - g_end_time) + ((unsigned long ) overflow << 24);
+
+  //distance = time_diff * 6.25e-8 *343 * 100 / 2; (Can remove, this is too confusing to read)
+
+  const float time = time_diff / 16000000.0f; // ticks to seconds
+  const float round_trip_time = time * 343.0f; // sound round trip travel dist in meters
+  const float meters = round_trip_time / 2.0f; // one way distance in meters
+  distance = meters * 100.0f; // convert to cm
+
+  return distance;
 }
