@@ -8,7 +8,8 @@
 #include "servo.h"
 #include "Timer.h"
 #include "lcd.h"
-#include "cyBot_Scan.h"
+#include "servo.h"
+#include "ping.h"
 #include "final_uart.h"
 #include "open_interface.h"
 #include "movement.h"
@@ -29,7 +30,7 @@ typedef struct {
     int end_angle;
     int avg_angle;
     double ping_distance;
-    double ir_distance_avg;
+    double cm_distance_avg;
     double width_cm;
 } object_t;
 
@@ -38,74 +39,35 @@ int object_count = 0;
 bool scan_active = false;
 bool autonomous_mode = false;
 
-// Converts raw IR to distance (calibrated curve)
-double convert_ir(int ir_raw) {
-    return 157000.0 * pow(ir_raw, -1.176);
-}
-
-// Changed to do 3 scans
-double get_average_ir_cm(int angle, cyBOT_Scan_t* scan) {
-    int total = 0;
+// Changed to do 2 scans
+double get_average_ping_cm(int angle) {
+    double total = 0;
     int i;
-    for (i = 0; i < 3; i++) {
-        cyBOT_Scan(angle, scan);
-        total += scan->IR_raw_val;
-    }
-    return convert_ir(total / 3);
-}
 
-void drive_to_target(object_t target) {
-    oi_t* sensor = oi_alloc();
-    oi_init(sensor);
-
-    // Assume CyBot starts facing 90 degrees (straight ahead).
-    // Adjust this offset if your bot faces 0 degrees at rest.
-    int turn_angle = target.avg_angle - 90;
-
-    char turn_msg[64];
-    sprintf(turn_msg, "Turning to %d deg\r\n", turn_angle);
-    uart_sendStr(turn_msg);
-    lcd_clear();
-    lcd_printf("Turning: %d", turn_angle);
-
-    // Perform turn
-    turn(sensor, turn_angle);
-
-    // Now drive forward
-    lcd_clear();
-    lcd_puts("Driving forward");
-
-    double drive_dist_mm = (target.ping_distance - 10) * 10;  // Keep 10 cm safe distance
-
-    if (drive_dist_mm > 0) {
-        char drive_msg[64];
-        sprintf(drive_msg, "Driving %.2f mm\r\n", drive_dist_mm);
-        uart_sendStr(drive_msg);
-
-        move_forward(sensor, drive_dist_mm);
-        lcd_clear();
-        lcd_puts("Arrived");
+    // Need a longer wait time when moving to 0
+    if (angle == 0) {
+        servo_move(0); //Move scanner to 0 degrees
+        timer_waitMillis(1000); // Wait for scanner to move
     } else {
-        uart_sendStr("Too close to object, no drive.\r\n");
-        lcd_clear();
-        lcd_puts("Too close");
+        servo_move(angle); //Move scanner to angle
+        timer_waitMillis(100); // Wait for scanner to move
     }
-
-    oi_free(sensor);
+    for (i = 0; i < 2; i++) {
+        total += ping_getDistance();
+    }
+    return total/2.0;
 }
-
 
 void scan_objects() {
-    cyBOT_Scan_t scan;
-    object_count = 0;
-    bool object_found = false;
-    int start = 0;
+    object_count = 0; // Keep track of num objects
+    bool object_found = false; // Flag for determining if we are in an object
+    int start = 0; // Holds starting angle of an object
 
     lcd_clear();
     lcd_puts("Scanning...");
     int angle;
     for (angle = 0; angle <= 180; angle += 3) {
-        if (command_flag && command_byte == 's') {
+        if (command_flag && command_byte == 's') { // Press s to stop scanning
             scan_active = false;
             uart_sendStr("\r\nScan stopped.\r\n");
             lcd_clear();
@@ -114,24 +76,27 @@ void scan_objects() {
             return;
         }
 
-        double ir_dist = get_average_ir_cm(angle, &scan);
+        double dist_cm = get_average_ping_cm(angle);
 
         char msg[64];
-        sprintf(msg, "Angle: %d, IR dist: %.2f cm\r\n", angle, ir_dist);
+        sprintf(msg, "Angle: %d, IR dist: %.2f cm\r\n", angle, dist_cm);
         uart_sendStr(msg);
 
-        if (ir_dist <= IR_THRESHOLD_CM && !object_found) {
+        if (dist_cm <= IR_THRESHOLD_CM && !object_found) {
             object_found = true;
             start = angle;
-        } else if ((ir_dist > IR_THRESHOLD_CM || angle == 180) && object_found) {
+        } else if ((dist_cm > IR_THRESHOLD_CM || angle == 180) && object_found) { // Object end, need to check if we can add object to list
             object_found = false;
             int end = angle;
             int mid = (start + end) / 2;
 
-            cyBOT_Scan(mid, &scan);
-            double ping_dist = scan.sound_dist;
+            servo_move(mid);        // Move servo to mid angle of objs
+            timer_waitMillis(1000); // Wait for scanner to move
+            double ping_dist = ping_getDistance(); // Ping and get dist
+            
+            // Compute width
             int delta_angle = end - start;
-            double width = 2 * ping_dist * tan((delta_angle * M_PI / 180.0) / 2);
+            double width = 2 * ping_dist * tan((delta_angle * M_PI / 180.0) / 2); 
 
             if (width >= MIN_WIDTH_CM && width <= MAX_WIDTH_CM && object_count < MAX_OBJECTS) {
                 object_t obj;
@@ -139,7 +104,7 @@ void scan_objects() {
                 obj.end_angle = end;
                 obj.avg_angle = mid;
                 obj.ping_distance = ping_dist;
-                obj.ir_distance_avg = ir_dist;
+                obj.cm_distance_avg = dist_cm;
                 obj.width_cm = width;
                 detected_objects[object_count++] = obj;
             }
@@ -238,10 +203,8 @@ int cyBot_readInt(void) {
     timer_init();
     lcd_init();
     uart_interrupt_init();
-    cyBOT_init_Scan(0b0111);
-
-    right_calibration_value = 248500;
-    left_calibration_value = 1251250;
+    servo_init();
+    scan_init();
 
     oi_t* sensor_data = oi_alloc();
     oi_init(sensor_data);

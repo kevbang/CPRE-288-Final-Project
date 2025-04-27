@@ -124,10 +124,10 @@ float ping_getDistance (void){
   ping_trigger();
 
   // Only move after both edges of interrupt
-  while(STATE != DONE){};
+  while(g_state != DONE){};
 
   // Check for overflow, if end time > start time the timer has wrapped
-  overflow = END_TIME > START_TIME;
+  overflow = g_end_time > g_start_time;
 
   // Total tick difference, include one wrap if there was overflow
   time_diff = (g_start_time - g_end_time) + ((unsigned long ) overflow << 24);
