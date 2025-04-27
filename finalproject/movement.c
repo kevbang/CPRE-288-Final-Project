@@ -1,30 +1,52 @@
 #include "movement.h"
 #include "open_interface.h"
 #include "lcd.h"
+#include "final_uart.h"
 #include <math.h>
+
+bool check_hazards(oi_t *sensor) {
+    // For cliff sensors, (0 = no cliff, 1 = cliff).
+    if (sensor->cliffLeft || sensor->cliffFrontLeft) { // Check for cliff left side, stop and display message if cliff
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Cliff detected");
+        uart_sendStr("\r\nCliff left side, back up\r\n");
+        return true;
+    } 
+    if (sensor->cliffRight || sensor->cliffFrontRight) { // Check for cliff right side, stop and display message if cliff
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Cliff detected");
+        uart_sendStr("\r\nCliff right side, back up\r\n");
+        return true;
+    }
+    if (sensor->bumpLeft) { // Check for bump on left side, stop and display message if bump
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Object bumped left");
+        uart_sendStr("\r\nObject bumped left side, back up\r\n");
+        return true;
+    }
+    if (sensor->bumpRight) { // Check for bump on right side, stop and display message if bump
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Object bumped right");
+        uart_sendStr("\r\nObject bumped right side, back up\r\n");
+        return true;
+    }
+    return false;
+}
 
 // Move forward and stop if bump is detected
 double move_forward(oi_t *sensor, double distance_mm) {
     double sum = 0;
+    oi_update(sensor); // Clear old data
     oi_setWheels(200, 200); // Set wheel speed forward
 
     while (sum < distance_mm) {
         oi_update(sensor);
         sum += sensor->distance;
-
-        if (sensor->bumpLeft) {
-            oi_setWheels(0, 0);
-            lcd_clear();
-            lcd_puts("Object bumped left");
-            uart_sendStr("\r\nObject bumped left side\r\n");
-            return sum;
-        } else if (sensor->bumpRight) {
-            oi_setWheels(0, 0);
-            lcd_clear();
-            lcd_puts("Object bumped right");
-            uart_sendStr("\r\nObject bumped right side\r\n");
-            return sum;
-        }
+        if (check_hazards(sensor)) return sum; // If we run into something stop      
     }
 
     oi_setWheels(0, 0); // Stop the robot
@@ -34,25 +56,13 @@ double move_forward(oi_t *sensor, double distance_mm) {
 // Move backward
 double move_backwards(oi_t *sensor, double distance_mm) {
     double sum = 0;
+    oi_update(sensor); // Clear old data
     oi_setWheels(-200, -200); // Set wheel speed backward
 
     while (sum < distance_mm) {
         oi_update(sensor);
         sum += fabs(sensor->distance);
-
-        if (sensor->bumpLeft) {
-            oi_setWheels(0, 0);
-            lcd_clear();
-            lcd_puts("Object bumped left");
-            uart_sendStr("\r\nObject bumped back left side\r\n");
-            return sum;
-        } else if (sensor->bumpRight) {
-            oi_setWheels(0, 0);
-            lcd_clear();
-            lcd_puts("Object bumped right");
-            uart_sendStr("\r\nObject bumped back right side\r\n");
-            return sum;
-        }
+        if (check_hazards(sensor)) return sum; // If we run into something stop      
     }
 
     oi_setWheels(0, 0);
