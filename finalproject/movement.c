@@ -4,7 +4,37 @@
 #include "final_uart.h"
 #include <math.h>
 
+#define TAPE_THRESHOLD 1200
+#define CLIFF_THRESHOLD 500
+
 bool check_hazards(oi_t *sensor) {
+    uint16_t tape_sens_left = sensor->cliffFrontLeftSignal;
+    uint16_t tape_sens_right = sensor->cliffFrontRightSignal;
+    uint16_t tape_left = sensor->cliffLeftSignal;
+    uint16_t tape_right = sensor->cliffRightSignal;
+
+    uart_sendStr("\r\nFront Left: %d\r\n", tape_sens_left);
+    uart_sendStr("Left: %d\r\n", tape_left);
+    uart_sendStr("\r\nFront Right: %d\r\n", tape_sens_right);
+    uart_sendStr("Left: %d\r\n", tape_right);
+
+    // Test what threshold tape sets the sensors too and check for that in order to determine when we hit the tape
+    // If we are between the tape and cliff threshold then we are at the border and should stop. This checks left side of the vehicle 
+    if ((tape_sens_left < TAPE_THRESHOLD && tape_sens_left > CLIFF_THRESHOLD) || (tape_left < TAPE_THRESHOLD && tape_left > CLIFF_THRESHOLD)) {
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Tape detected");
+        uart_sendStr("\r\nTape left side\r\n");
+        return true;
+    }
+    // If we are between the tape and cliff threshold then we are at the border and should stop. This checks right side of the vehicle 
+    if ((tape_sens_right < TAPE_THRESHOLD && tape_sens_right > CLIFF_THRESHOLD) || (tape_right < TAPE_THRESHOLD && tape_right > CLIFF_THRESHOLD)) {
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Tape detected");
+        uart_sendStr("\r\nTape right side\r\n");
+        return true;
+    }
     // For cliff sensors, (0 = no cliff, 1 = cliff).
     if (sensor->cliffLeft || sensor->cliffFrontLeft) { // Check for cliff left side, stop and display message if cliff
         oi_setWheels(0, 0);
