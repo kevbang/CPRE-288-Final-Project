@@ -116,7 +116,7 @@ void UART1_Handler(void) {
         // Allow all relevant commands to set the flag
         if (byte_received == 'g' || byte_received == 's' || byte_received == 't' ||
             byte_received == 'w' || byte_received == 'a' || byte_received == 'd' ||
-            byte_received == 'x') {
+            byte_received == 'x' || byte_received == 'h') {
             command_byte = byte_received;
             command_flag = 1;
         }

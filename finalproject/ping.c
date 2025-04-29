@@ -120,11 +120,25 @@ float ping_getDistance (void){
 
   uint8_t overflow = 0;
 
+  int timeout = 0;
+  const int TIMEOUT_THRESHOLD = 800000;
   // Send trigger to start capture sequence
   ping_trigger();
 
   // Only move after both edges of interrupt
-  while(g_state != DONE){};
+  while(g_state != DONE && timeout++ < TIMEOUT_THRESHOLD){};
+
+  if(timeout >= TIMEOUT_THRESHOLD)
+      return -1.0f;
+
+
+  // handle edge case where timer wraps around
+//  if(g_end_time < g_start_time) {
+//      time_diff = (g_start_time - g_end_time) + ((unsigned long ) overflow << 24); // 24-bit wrap
+//  }
+//  else {
+//      time_diff = g_start_time - g_end_time;
+//  }
 
   // Check for overflow, if end time > start time the timer has wrapped
   overflow = g_end_time > g_start_time;

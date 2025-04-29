@@ -21,3 +21,5 @@ void scan(int angle, cyBot_Scan* getScan) {
     getScan->sound_dist = ping_getDistance();  // PING sensor
     getScan->IR_raw_val = adc_read();          // IR sensor raw value
 }
+
+

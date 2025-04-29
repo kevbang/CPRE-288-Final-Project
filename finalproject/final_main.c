@@ -46,25 +46,31 @@ double get_average_ping_cm(int angle) {
 
     // Need a longer wait time when moving to 0
     if (angle == 0) {
-        servo_move(0); //Move scanner to 0 degrees
+        servo_move(angle); // Move scanner to 0 degrees
         timer_waitMillis(1000); // Wait for scanner to move
-    } else {
+    }
+    else {
         servo_move(angle); //Move scanner to angle
         timer_waitMillis(100); // Wait for scanner to move
     }
-    for (i = 0; i < 2; i++) {
-        total += ping_getDistance();
+    for (i = 0; i < 3; i++) {
+        float distance = ping_getDistance();
+        // Add error handling check for an invalid return
+        if(distance < 0)
+            return 999.0f;
+        total+=distance;
     }
-    return total/2.0;
+    return total/3.0;
 }
 
 void scan_objects() {
     object_count = 0; // Keep track of num objects
     bool object_found = false; // Flag for determining if we are in an object
     int start = 0; // Holds starting angle of an object
+    char test[20];
 
     lcd_clear();
-    lcd_puts("Scanning...");
+    lcd_puts("Scanning... from function");
     int angle;
     for (angle = 0; angle <= 180; angle += 3) {
         if (command_flag && command_byte == 's') { // Press s to stop scanning
@@ -75,9 +81,11 @@ void scan_objects() {
             command_flag = 0;
             return;
         }
+        sprintf(test, "angle: %d", angle);
+        uart_sendStr(test);
 
         double dist_cm = get_average_ping_cm(angle);
-
+        lcd_puts("Hello there");
         char msg[64];
         sprintf(msg, "Angle: %d, IR dist: %.2f cm\r\n", angle, dist_cm);
         uart_sendStr(msg);
@@ -93,10 +101,10 @@ void scan_objects() {
             servo_move(mid);        // Move servo to mid angle of objs
             timer_waitMillis(1000); // Wait for scanner to move
             double ping_dist = ping_getDistance(); // Ping and get dist
-            
+
             // Compute width
             int delta_angle = end - start;
-            double width = 2 * ping_dist * tan((delta_angle * M_PI / 180.0) / 2); 
+            double width = 2 * ping_dist * tan((delta_angle * M_PI / 180.0) / 2);
 
             if (width >= MIN_WIDTH_CM && width <= MAX_WIDTH_CM && object_count < MAX_OBJECTS) {
                 object_t obj;
@@ -110,7 +118,6 @@ void scan_objects() {
             }
         }
     }
-
     uart_sendStr("\r\nScan complete.\r\n");
     lcd_clear();
     lcd_puts("Scan complete");
@@ -224,6 +231,10 @@ void display_commands() {
                 lcd_clear();
                 lcd_puts("Scanning...");
                 scan_objects();
+//                servo_move(30);
+//                timer_waitMillis(100);
+//                servo_move(100);
+//                timer_waitMillis(100);
             } else if (cmd == 's') {
                 scan_active = false;
                 uart_sendStr("\r\nManual Stop Triggered.\r\n");
