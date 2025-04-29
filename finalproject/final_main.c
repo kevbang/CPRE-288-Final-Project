@@ -150,7 +150,7 @@ int cyBot_readInt(void) {
         while (!command_flag) {} // Wait for next byte
         c = command_byte; // Get the user input
         command_flag = 0; // Reset command flag
-        uart_sendByte(c); // Display bit back to user
+        uart_sendChar(c); // Display bit back to user
 
         // if newline or carriage-return, stop
         if (c == '\r' || c == '\n') {
@@ -180,31 +180,30 @@ int cyBot_readInt(void) {
     return 0;   // Return 0 as default
 }
 
- void display_commands() {
-    uart_sendStr("\r\nList of commands:\r\n
-        g: initiate scan\r\n
-        s: interrupt scan\r\n
-        \r\n
-        Set Movement:\r\n
-        w: forward 10 cm\r\n
-        x: backward 10 cm\r\n
-        a: left 30 deg\r\n
-        d: right 30 deg\r\n
-        \r\n
-        Custom Movement:\r\n
-        i: forward x cm\r\n
-        k: backward x cm\r\n
-        j: left x deg\r\n
-        l: right x deg\r\n
-    ");
- }
+void display_commands() {
+    uart_sendStr("\r\nList of commands:\r\n"
+                 "g: initiate scan\r\n"
+                 "s: interrupt scan\r\n"
+                 "\r\n"
+                 "Set Movement:\r\n"
+                 "w: forward 10 cm\r\n"
+                 "x: backward 10 cm\r\n"
+                 "a: left 30 deg\r\n"
+                 "d: right 30 deg\r\n"
+                 "\r\n"
+                 "Custom Movement:\r\n"
+                 "i: forward x cm\r\n"
+                 "k: backward x cm\r\n"
+                 "j: left x deg\r\n"
+                 "l: right x deg\r\n");
+}
 
  int main(void) {
     timer_init();
     lcd_init();
     uart_interrupt_init();
-    servo_init();
     scan_init();
+    char buffer[25];
 
     oi_t* sensor_data = oi_alloc();
     oi_init(sensor_data);
@@ -235,13 +234,15 @@ int cyBot_readInt(void) {
                 lcd_clear();
                 lcd_puts("Moving forward");
                 dist_result = move_forward(sensor_data, 100)/10.0;
-                uart_sendStr("\r\nMoved forward %.2fcm\r\n", dist_result); // Print resulting forward movement
+                sprintf(buffer, "\r\nMoved forward %.2fcm\r\n", dist_result);
+                uart_sendStr(buffer); // Print resulting forward movement
             } else if (cmd == 'x') {
                 uart_sendStr("\r\nMoving backward 10cm\r\n");
                 lcd_clear();
                 lcd_puts("Moving backward");
                 dist_result = move_backwards(sensor_data, 100)/10.0;
-                uart_sendStr("\r\nMoved backward %.2fcm\r\n", dist_result); // Print resulting backward movement
+                sprintf(buffer, "\r\nMoved backward %.2fcm\r\n", dist_result);
+                uart_sendStr(buffer); // Print resulting backward movement
             } else if (cmd == 'a') {
                 uart_sendStr("\r\nTurning left 30 deg\r\n");
                 lcd_clear();
@@ -262,18 +263,21 @@ int cyBot_readInt(void) {
                 if (custom_input == 0) { // Invalid input, continue
                     continue;
                 }
-                uart_sendStr("\r\nMoving forward %dcm\r\n", custom_input/10);
+                sprintf(buffer, "\r\nMoving forward %dcm\r\n", custom_input/10);
+                uart_sendStr(buffer);
                 lcd_clear();
                 lcd_puts("Moving forward");
                 dist_result = move_forward(sensor_data, custom_input)/10.0;
-                uart_sendStr("\r\nMoved forward %.2fcm\r\n", dist_result); // Print resulting forward movement
+                sprintf(buffer, "\r\nMoved forward %.2fcm\r\n", dist_result);
+                uart_sendStr(buffer); // Print resulting forward movement
             } else if (cmd == 'j') { // Turn left cutom amount
                 uart_sendStr("\r\nTurn how much left in cm?\r\n");
                 custom_input = cyBot_readInt(); // Get double digit int
                 if (custom_input == 0) { // Invalid input, continue
                     continue;
                 }
-                uart_sendStr("\r\nRotating %d deg left\r\n", custom_input);
+                sprintf(buffer, "\r\nRotating %d deg left\r\n", custom_input);
+                uart_sendStr(buffer);
                 lcd_clear();
                 lcd_puts("Turning left");
                 turn(sensor_data, custom_input);
@@ -283,22 +287,25 @@ int cyBot_readInt(void) {
                 if (custom_input == 0) { // Invalid input, continue
                     continue;
                 }
-                uart_sendStr("\r\nMoving backward %dcm\r\n", custom_input/10);
+                sprintf(buffer, "\r\nMoving backward %dcm\r\n", custom_input/10);
+                uart_sendStr(buffer);
                 lcd_clear();
                 lcd_puts("Moving backward");
                 dist_result = move_backwards(sensor_data, custom_input)/10.0;
-                uart_sendStr("\r\nMoved backward %.2fcm\r\n", dist_result); // Print resulting backward movement
+                sprintf(buffer, "\r\nMoved backward %.2fcm\r\n", dist_result);
+                uart_sendStr(buffer); // Print resulting backward movement
             } else if (cmd == 'l') { // Turn right custom amount
                 uart_sendStr("\r\nTurn how much right in cm?\r\n");
                 custom_input = cyBot_readInt(); // Get double digit int
                 if (custom_input == 0) { // Invalid input, continue
                     continue;
                 }
-                uart_sendStr("\r\nRotating %d deg right\r\n", custom_input);
+                sprintf(buffer, "\r\nRotating %d deg right\r\n", custom_input);
+                uart_sendStr(buffer);
                 lcd_clear();
                 lcd_puts("Turning right");
                 turn(sensor_data, -custom_input);
-            } else if (cms == 'h') { // Display list of commands
+            } else if (cmd == 'h') { // Display list of commands
                 display_commands(); 
             } else {
                 uart_sendStr("\r\nUnknown command.\r\n");
