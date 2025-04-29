@@ -1,23 +1,82 @@
 #include "movement.h"
 #include "open_interface.h"
 #include "lcd.h"
+#include "final_uart.h"
 #include <math.h>
+
+#define TAPE_THRESHOLD 1200
+#define CLIFF_THRESHOLD 500
+
+bool check_hazards(oi_t *sensor) {
+    uint16_t tape_sens_left = sensor->cliffFrontLeftSignal;
+    uint16_t tape_sens_right = sensor->cliffFrontRightSignal;
+    uint16_t tape_left = sensor->cliffLeftSignal;
+    uint16_t tape_right = sensor->cliffRightSignal;
+
+    uart_sendStr("\r\nFront Left: %d\r\n", tape_sens_left);
+    uart_sendStr("Left: %d\r\n", tape_left);
+    uart_sendStr("\r\nFront Right: %d\r\n", tape_sens_right);
+    uart_sendStr("Left: %d\r\n", tape_right);
+
+    // Test what threshold tape sets the sensors too and check for that in order to determine when we hit the tape
+    // If we are between the tape and cliff threshold then we are at the border and should stop. This checks left side of the vehicle 
+    if ((tape_sens_left < TAPE_THRESHOLD && tape_sens_left > CLIFF_THRESHOLD) || (tape_left < TAPE_THRESHOLD && tape_left > CLIFF_THRESHOLD)) {
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Tape detected");
+        uart_sendStr("\r\nTape left side\r\n");
+        return true;
+    }
+    // If we are between the tape and cliff threshold then we are at the border and should stop. This checks right side of the vehicle 
+    if ((tape_sens_right < TAPE_THRESHOLD && tape_sens_right > CLIFF_THRESHOLD) || (tape_right < TAPE_THRESHOLD && tape_right > CLIFF_THRESHOLD)) {
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Tape detected");
+        uart_sendStr("\r\nTape right side\r\n");
+        return true;
+    }
+    // For cliff sensors, (0 = no cliff, 1 = cliff).
+    if (sensor->cliffLeft || sensor->cliffFrontLeft) { // Check for cliff left side, stop and display message if cliff
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Cliff detected");
+        uart_sendStr("\r\nCliff left side, back up\r\n");
+        return true;
+    } 
+    if (sensor->cliffRight || sensor->cliffFrontRight) { // Check for cliff right side, stop and display message if cliff
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Cliff detected");
+        uart_sendStr("\r\nCliff right side, back up\r\n");
+        return true;
+    }
+    if (sensor->bumpLeft) { // Check for bump on left side, stop and display message if bump
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Object bumped left");
+        uart_sendStr("\r\nObject bumped left side, back up\r\n");
+        return true;
+    }
+    if (sensor->bumpRight) { // Check for bump on right side, stop and display message if bump
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Object bumped right");
+        uart_sendStr("\r\nObject bumped right side, back up\r\n");
+        return true;
+    }
+    return false;
+}
 
 // Move forward and stop if bump is detected
 double move_forward(oi_t *sensor, double distance_mm) {
     double sum = 0;
+    oi_update(sensor); // Clear old data
     oi_setWheels(200, 200); // Set wheel speed forward
 
     while (sum < distance_mm) {
         oi_update(sensor);
         sum += sensor->distance;
-
-        if (sensor->bumpLeft || sensor->bumpRight) {
-            lcd_clear();
-            lcd_puts("Object bumped");
-            oi_setWheels(0, 0);
-            return sum;
-        }
+        if (check_hazards(sensor)) return sum; // If we run into something stop      
     }
 
     oi_setWheels(0, 0); // Stop the robot
@@ -27,18 +86,13 @@ double move_forward(oi_t *sensor, double distance_mm) {
 // Move backward
 double move_backwards(oi_t *sensor, double distance_mm) {
     double sum = 0;
+    oi_update(sensor); // Clear old data
     oi_setWheels(-200, -200); // Set wheel speed backward
 
     while (sum < distance_mm) {
         oi_update(sensor);
         sum += fabs(sensor->distance);
-
-        if (sensor->bumpLeft || sensor->bumpRight) {
-            lcd_clear();
-            lcd_puts("Bumped while rev");
-            oi_setWheels(0, 0);
-            return sum;
-        }
+        if (check_hazards(sensor)) return sum; // If we run into something stop      
     }
 
     oi_setWheels(0, 0);
