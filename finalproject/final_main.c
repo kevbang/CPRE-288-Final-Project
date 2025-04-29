@@ -53,7 +53,7 @@ double get_average_ping_cm(int angle) {
         servo_move(angle); //Move scanner to angle
         timer_waitMillis(100); // Wait for scanner to move
     }
-    for (i = 0; i < 3; i++) {
+    for (i = 0; i < 2; i++) {
         float distance = ping_getDistance();
         // Add error handling check for an invalid return
         if(distance < 0)
@@ -231,10 +231,6 @@ void display_commands() {
                 lcd_clear();
                 lcd_puts("Scanning...");
                 scan_objects();
-//                servo_move(30);
-//                timer_waitMillis(100);
-//                servo_move(100);
-//                timer_waitMillis(100);
             } else if (cmd == 's') {
                 scan_active = false;
                 uart_sendStr("\r\nManual Stop Triggered.\r\n");

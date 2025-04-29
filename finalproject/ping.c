@@ -72,23 +72,27 @@ void ping_trigger (void){
     TIMER3_IMR_R &= ~TIMER_IMR_CBEIM;
     // Disable alternate function (disconnect timer from port pin)
     GPIO_PORTB_AFSEL_R &= ~(1 << 3);
-
-    // YOUR CODE HERE FOR PING TRIGGER/START PULSE
-
     GPIO_PORTB_DIR_R |= (1 << 3);
+    GPIO_PORTB_DEN_R |= (1 << 3);
+
+
     GPIO_PORTB_DATA_R &= ~(1 << 3); // set to low (0)
     //timer_waitMillis(200);
-    timer_waitMicros(5); //wait 5 micro sec
+    timer_waitMicros(2); //wait 2 micro sec
     GPIO_PORTB_DATA_R |= (1 << 3); // set back to high (1)
-    //timer_waitMillis(200);
-    timer_waitMicros(5); //wait 5 micro sec
+    timer_waitMicros(10); //wait 10 micro sec
     GPIO_PORTB_DATA_R &= ~(1 << 3); // set back to low
+
+    GPIO_PORTB_DIR_R &= ~(1 << 3);
+    GPIO_PORTB_AFSEL_R |= (1 << 3);
+    GPIO_PORTB_PCTL_R &= ~(0xF << 12); //clear pctl for PB3
+    GPIO_PORTB_PCTL_R |= (0x07 << 12); // set PCTL to T3CCP1
+    GPIO_PORTB_DEN_R |= (1 << 3);
 
     // Clear an interrupt that may have been erroneously triggered
     TIMER3_ICR_R = TIMER_IMR_CBEIM;
     // Re-enable alternate function, timer interrupt, and timer
-    GPIO_PORTB_DIR_R &= ~(1 << 3);
-    GPIO_PORTB_AFSEL_R |= (1 << 3);
+
     TIMER3_IMR_R |= TIMER_IMR_CBEIM;
     TIMER3_CTL_R |= TIMER_CTL_TBEN;
 }
@@ -126,19 +130,12 @@ float ping_getDistance (void){
   ping_trigger();
 
   // Only move after both edges of interrupt
+  // Added a timeout and a timeout threshold to handle the case where a missed echo will result in an infinite wait
   while(g_state != DONE && timeout++ < TIMEOUT_THRESHOLD){};
 
   if(timeout >= TIMEOUT_THRESHOLD)
       return -1.0f;
 
-
-  // handle edge case where timer wraps around
-//  if(g_end_time < g_start_time) {
-//      time_diff = (g_start_time - g_end_time) + ((unsigned long ) overflow << 24); // 24-bit wrap
-//  }
-//  else {
-//      time_diff = g_start_time - g_end_time;
-//  }
 
   // Check for overflow, if end time > start time the timer has wrapped
   overflow = g_end_time > g_start_time;
