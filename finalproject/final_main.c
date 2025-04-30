@@ -13,6 +13,7 @@
 #include "final_uart.h"
 #include "open_interface.h"
 #include "movement.h"
+#include "final_scan.h"
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>

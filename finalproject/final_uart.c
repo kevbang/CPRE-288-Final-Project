@@ -119,7 +119,10 @@ void UART1_Handler(void) {
             byte_received == 'x' || byte_received == 'h' || byte_received == 'i' ||
             byte_received == 'j' || byte_received == 'k' || byte_received == 'l' ||
             byte_received == '\r' || byte_received == '\n' ||
-            byte_received == '0' || byte_received == '1' || byte_received == '2' || byte_received == '3' || byte_received == '4'  || byte_received == '5' || byte_received == '6' || byte_received == '7'  || byte_received == '8' || byte_received == '9'
+            byte_received == '0' || byte_received == '1' || byte_received == '2' ||
+            byte_received == '3' || byte_received == '4'  || byte_received == '5' ||
+            byte_received == '6' || byte_received == '7'  || byte_received == '8' ||
+            byte_received == '9'
             ) {
             command_byte = byte_received;
             command_flag = 1;

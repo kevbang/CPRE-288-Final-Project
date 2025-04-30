@@ -15,14 +15,14 @@ bool check_hazards(oi_t *sensor) {
 
     char buffer[25];
 
-    sprintf(buffer, "\r\nFront Left: %d\r\n", tape_sens_left);
-    uart_sendStr(buffer);
-    sprintf(buffer, "Left: %d\r\n", tape_left);
-    uart_sendStr(buffer);
-    sprintf(buffer, "\r\nFront Right: %d\r\n", tape_sens_right);
-    uart_sendStr(buffer);
-    sprintf(buffer, "Left: %d\r\n", tape_right);
-    uart_sendStr(buffer);
+//    sprintf(buffer, "\r\nFront Left: %d\r\n", tape_sens_left);
+//    uart_sendStr(buffer);
+//    sprintf(buffer, "Left: %d\r\n", tape_left);
+//    uart_sendStr(buffer);
+//    sprintf(buffer, "\r\nFront Right: %d\r\n", tape_sens_right);
+//    uart_sendStr(buffer);
+//    sprintf(buffer, "Left: %d\r\n", tape_right);
+//    uart_sendStr(buffer);
 
     // Test what threshold tape sets the sensors too and check for that in order to determine when we hit the tape
     // If we are between the tape and cliff threshold then we are at the border and should stop. This checks left side of the vehicle 
