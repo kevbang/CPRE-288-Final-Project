@@ -6,7 +6,7 @@
 #include <math.h>
 #include "open_interface.h"
 
-#define TAPE_THRESHOLD 2500
+#define TAPE_THRESHOLD 2700
 #define CLIFF_THRESHOLD 500
 
 int right_calibration_value = 285250;

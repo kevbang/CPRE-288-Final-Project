@@ -4,7 +4,7 @@
 #include "final_uart.h"
 #include <math.h>
 
-#define TAPE_THRESHOLD 2500
+#define TAPE_THRESHOLD 2600
 #define CLIFF_THRESHOLD 500
 
 bool check_hazards(oi_t *sensor) {
@@ -15,18 +15,18 @@ bool check_hazards(oi_t *sensor) {
 
     char buffer[25];
 
-//    sprintf(buffer, "\r\nFront Left: %d\r\n", tape_sens_left);
-//    uart_sendStr(buffer);
-//    sprintf(buffer, "Left: %d\r\n", tape_left);
-//    uart_sendStr(buffer);
-//    sprintf(buffer, "\r\nFront Right: %d\r\n", tape_sens_right);
-//    uart_sendStr(buffer);
-//    sprintf(buffer, "Left: %d\r\n", tape_right);
-//    uart_sendStr(buffer);
+    sprintf(buffer, "\r\nFront Left: %d\r\n", tape_sens_left);
+    uart_sendStr(buffer);
+    sprintf(buffer, "Left: %d\r\n", tape_left);
+    uart_sendStr(buffer);
+    sprintf(buffer, "\r\nFront Right: %d\r\n", tape_sens_right);
+    uart_sendStr(buffer);
+    sprintf(buffer, "Left: %d\r\n", tape_right);
+    uart_sendStr(buffer);
 
     // Test what threshold tape sets the sensors too and check for that in order to determine when we hit the tape
     // If we are between the tape and cliff threshold then we are at the border and should stop. This checks left side of the vehicle 
-    if ((tape_sens_left < TAPE_THRESHOLD && tape_sens_left > CLIFF_THRESHOLD) || (tape_left < TAPE_THRESHOLD && tape_left > CLIFF_THRESHOLD)) {
+    if ((tape_sens_left > TAPE_THRESHOLD || tape_left > TAPE_THRESHOLD) ) {
         oi_setWheels(0, 0);
         lcd_clear();
         lcd_puts("Tape detected");
@@ -34,28 +34,34 @@ bool check_hazards(oi_t *sensor) {
         return true;
     }
     // If we are between the tape and cliff threshold then we are at the border and should stop. This checks right side of the vehicle
-    if ((tape_sens_right < TAPE_THRESHOLD && tape_sens_right > CLIFF_THRESHOLD) || (tape_right < TAPE_THRESHOLD && tape_right > CLIFF_THRESHOLD)) {
+    if ((tape_sens_right > TAPE_THRESHOLD) || (tape_right > TAPE_THRESHOLD )) {
         oi_setWheels(0, 0);
         lcd_clear();
         lcd_puts("Tape detected");
         uart_sendStr("\r\nTape right side\r\n");
         return true;
     }
-    // For cliff sensors, (0 = no cliff, 1 = cliff).
-    if (sensor->cliffLeft || sensor->cliffFrontLeft) { // Check for cliff left side, stop and display message if cliff
+
+    // cliff stuff
+
+    if(tape_sens_left < CLIFF_THRESHOLD || tape_left < CLIFF_THRESHOLD) {
         oi_setWheels(0, 0);
         lcd_clear();
         lcd_puts("Cliff detected");
         uart_sendStr("\r\nCliff left side, back up\r\n");
         return true;
     }
-    if (sensor->cliffRight || sensor->cliffFrontRight) { // Check for cliff right side, stop and display message if cliff
+
+    if(tape_sens_right < CLIFF_THRESHOLD || tape_right < CLIFF_THRESHOLD) {
         oi_setWheels(0, 0);
         lcd_clear();
         lcd_puts("Cliff detected");
         uart_sendStr("\r\nCliff right side, back up\r\n");
         return true;
     }
+
+    // bumper
+
     if (sensor->bumpLeft) { // Check for bump on left side, stop and display message if bump
         oi_setWheels(0, 0);
         lcd_clear();
@@ -74,6 +80,78 @@ bool check_hazards(oi_t *sensor) {
 
 
 
+    return false;
+}
+
+bool check_back_hazards(oi_t *sensor) {
+//    uint16_t tape_sens_left = sensor->cliffFrontLeftSignal;
+//    uint16_t tape_sens_right = sensor->cliffFrontRightSignal;
+    uint16_t tape_left = sensor->cliffLeftSignal;
+    uint16_t tape_right = sensor->cliffRightSignal;
+
+    char buffer[25];
+
+//    sprintf(buffer, "\r\nFront Left: %d\r\n", tape_sens_left);
+//    uart_sendStr(buffer);
+    sprintf(buffer, "Left: %d\r\n", tape_left);
+    uart_sendStr(buffer);
+//    sprintf(buffer, "\r\nFront Right: %d\r\n", tape_sens_right);
+//    uart_sendStr(buffer);
+    sprintf(buffer, "Left: %d\r\n", tape_right);
+    uart_sendStr(buffer);
+
+    // Test what threshold tape sets the sensors too and check for that in order to determine when we hit the tape
+    // If we are between the tape and cliff threshold then we are at the border and should stop. This checks left side of the vehicle
+    if (tape_left > TAPE_THRESHOLD)  {
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Tape detected");
+        uart_sendStr("\r\nTape left side\r\n");
+        return true;
+    }
+    // If we are between the tape and cliff threshold then we are at the border and should stop. This checks right side of the vehicle
+    if (tape_right > TAPE_THRESHOLD ) {
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Tape detected");
+        uart_sendStr("\r\nTape right side\r\n");
+        return true;
+    }
+
+    // cliff stuff
+
+    if(tape_left < CLIFF_THRESHOLD) {
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Cliff detected");
+        uart_sendStr("\r\nCliff left side, back up\r\n");
+        return true;
+    }
+
+    if(tape_right < CLIFF_THRESHOLD) {
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Cliff detected");
+        uart_sendStr("\r\nCliff right side, back up\r\n");
+        return true;
+    }
+
+    // bumper
+
+    if (sensor->bumpLeft) { // Check for bump on left side, stop and display message if bump
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Object bumped left");
+        uart_sendStr("\r\nObject bumped left side, back up\r\n");
+        return true;
+    }
+    if (sensor->bumpRight) { // Check for bump on right side, stop and display message if bump
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Object bumped right");
+        uart_sendStr("\r\nObject bumped right side, back up\r\n");
+        return true;
+    }
     return false;
 }
 
@@ -102,7 +180,7 @@ double move_backwards(oi_t *sensor, double distance_mm) {
     while (sum < distance_mm) {
         oi_update(sensor);
         sum += fabs(sensor->distance);
-        if (check_hazards(sensor)) return sum; // If we run into something stop      
+        if (check_back_hazards(sensor)) return sum; // If we run into something stop
     }
 
     oi_setWheels(0, 0);
