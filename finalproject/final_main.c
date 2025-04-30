@@ -157,7 +157,7 @@ int cyBot_readInt(void) {
         while (!command_flag) {} // Wait for next byte
         c = command_byte; // Get the user input
         command_flag = 0; // Reset command flag
-        uart_sendChar(c); // Display bit back to user
+        //uart_sendChar(c); // Display bit back to user
 
         // if newline or carriage-return, stop
         if (c == '\r' || c == '\n') {
@@ -183,7 +183,7 @@ int cyBot_readInt(void) {
         return (int)value;
     }
 
-    uart_sendStr("\r\nInvalid input, no commands sent :(\r\n");
+    uart_sendStr("\r\n Invalid input, no commands sent :(\r\n");
     return 0;   // Return 0 as default
 }
 
@@ -278,7 +278,7 @@ void display_commands() {
                 sprintf(buffer, "\r\nMoved forward %.2fcm\r\n", dist_result);
                 uart_sendStr(buffer); // Print resulting forward movement
             } else if (cmd == 'j') { // Turn left cutom amount
-                uart_sendStr("\r\nTurn how much left in cm?\r\n");
+                uart_sendStr("\r\nTurn how much left in deg?\r\n");
                 custom_input = cyBot_readInt(); // Get double digit int
                 if (custom_input == 0) { // Invalid input, continue
                     continue;
@@ -302,7 +302,7 @@ void display_commands() {
                 sprintf(buffer, "\r\nMoved backward %.2fcm\r\n", dist_result);
                 uart_sendStr(buffer); // Print resulting backward movement
             } else if (cmd == 'l') { // Turn right custom amount
-                uart_sendStr("\r\nTurn how much right in cm?\r\n");
+                uart_sendStr("\r\nTurn how much right in deg?\r\n");
                 custom_input = cyBot_readInt(); // Get double digit int
                 if (custom_input == 0) { // Invalid input, continue
                     continue;
