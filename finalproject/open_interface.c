@@ -626,3 +626,10 @@ double oi_getMotorCalibrationLeft(void) { return motor_cal_factor_L; }
  */
 double oi_getMotorCalibrationRight(void) { return motor_cal_factor_R; }
 
+void oi_readCliffSensors(uint8_t* left, uint8_t* front_left, uint8_t* front_right, uint8_t* right) {
+    uart_sendChar(142); uart_sendChar(9);  *left = uart_receive_nonBlocking();
+    uart_sendChar(142); uart_sendChar(10); *front_left = uart_receive_nonBlocking();
+    uart_sendChar(142); uart_sendChar(11); *front_right = uart_receive_nonBlocking();
+    uart_sendChar(142); uart_sendChar(12); *right = uart_receive_nonBlocking();
+}
+

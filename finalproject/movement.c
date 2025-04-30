@@ -4,7 +4,7 @@
 #include "final_uart.h"
 #include <math.h>
 
-#define TAPE_THRESHOLD 1200
+#define TAPE_THRESHOLD 2500
 #define CLIFF_THRESHOLD 500
 
 bool check_hazards(oi_t *sensor) {
@@ -33,7 +33,7 @@ bool check_hazards(oi_t *sensor) {
         uart_sendStr("\r\nTape left side\r\n");
         return true;
     }
-    // If we are between the tape and cliff threshold then we are at the border and should stop. This checks right side of the vehicle 
+    // If we are between the tape and cliff threshold then we are at the border and should stop. This checks right side of the vehicle
     if ((tape_sens_right < TAPE_THRESHOLD && tape_sens_right > CLIFF_THRESHOLD) || (tape_right < TAPE_THRESHOLD && tape_right > CLIFF_THRESHOLD)) {
         oi_setWheels(0, 0);
         lcd_clear();
@@ -48,7 +48,7 @@ bool check_hazards(oi_t *sensor) {
         lcd_puts("Cliff detected");
         uart_sendStr("\r\nCliff left side, back up\r\n");
         return true;
-    } 
+    }
     if (sensor->cliffRight || sensor->cliffFrontRight) { // Check for cliff right side, stop and display message if cliff
         oi_setWheels(0, 0);
         lcd_clear();
@@ -70,6 +70,10 @@ bool check_hazards(oi_t *sensor) {
         uart_sendStr("\r\nObject bumped right side, back up\r\n");
         return true;
     }
+
+
+
+
     return false;
 }
 

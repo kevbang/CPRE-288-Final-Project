@@ -63,85 +63,6 @@ double get_average_ping_cm(int angle) {
     return total/3.0;
 }
 
-void scan_objects() {
-    object_count = 0; // Keep track of num objects
-    bool object_found = false; // Flag for determining if we are in an object
-    int start = 0; // Holds starting angle of an object
-    char test[20];
-
-    lcd_clear();
-    lcd_puts("Scanning... from function");
-    int angle;
-    for (angle = 0; angle <= 180; angle += 3) {
-        if (command_flag && command_byte == 's') { // Press s to stop scanning
-            scan_active = false;
-            uart_sendStr("\r\nScan stopped.\r\n");
-            lcd_clear();
-            lcd_puts("Scan stopped");
-            command_flag = 0;
-            return;
-        }
-        sprintf(test, "angle: %d", angle);
-        uart_sendStr(test);
-
-        double dist_cm = get_average_ping_cm(angle);
-        lcd_puts("Hello there");
-        char msg[64];
-        sprintf(msg, "Angle: %d, IR dist: %.2f cm\r\n", angle, dist_cm);
-        uart_sendStr(msg);
-
-        if (dist_cm <= IR_THRESHOLD_CM && !object_found) {
-            object_found = true;
-            start = angle;
-        } else if ((dist_cm > IR_THRESHOLD_CM || angle == 180) && object_found) { // Object end, need to check if we can add object to list
-            object_found = false;
-            int end = angle;
-            int mid = (start + end) / 2;
-
-            servo_move(mid);        // Move servo to mid angle of objs
-            timer_waitMillis(1000); // Wait for scanner to move
-            double ping_dist = ping_getDistance(); // Ping and get dist
-
-            // Compute width
-            int delta_angle = end - start;
-            double width = 2 * ping_dist * tan((delta_angle * M_PI / 180.0) / 2);
-
-            if (width >= MIN_WIDTH_CM && width <= MAX_WIDTH_CM && object_count < MAX_OBJECTS) {
-                object_t obj;
-                obj.start_angle = start;
-                obj.end_angle = end;
-                obj.avg_angle = mid;
-                obj.ping_distance = ping_dist;
-                obj.cm_distance_avg = dist_cm;
-                obj.width_cm = width;
-                detected_objects[object_count++] = obj;
-            }
-        }
-    }
-    uart_sendStr("\r\nScan complete.\r\n");
-    lcd_clear();
-    lcd_puts("Scan complete");
-
-    if (object_count == 0) {
-        uart_sendStr("\r\nNo valid object detected.\r\n");
-        lcd_clear();
-        lcd_puts("No object");
-        return;
-    }
-
-    int min_index = 0;
-    int i;
-    char summary[128];
-    for (i = 1; i < object_count; i++) {
-        sprintf(summary, "\r\nObject #%d at angle %d, distance %.2f cm, width %.2f cm\r\n",
-            i,
-            detected_objects[i].avg_angle,
-            detected_objects[i].ping_distance,
-            detected_objects[i].width_cm);
-        uart_sendStr(summary);
-    }
-}
-
 #define BUF_SIZE  3 // Set up to only take 2 digits
 
 // Get double digit input in PuTTy from user
@@ -230,7 +151,7 @@ void display_commands() {
                 uart_sendStr("\r\nStarting Scan...\r\n");
                 lcd_clear();
                 lcd_puts("Scanning...");
-                scan_objects();
+                scanFullForObjects();
             } else if (cmd == 's') {
                 scan_active = false;
                 uart_sendStr("\r\nManual Stop Triggered.\r\n");
