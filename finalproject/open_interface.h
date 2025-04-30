@@ -190,6 +190,8 @@ static double oi_getRadians(oi_t *self);
 // Gets the distance moved since the last call to getDistance
 static double oi_getDistance(oi_t *self);
 
+void oi_readCliffSensors(uint8_t* left, uint8_t* front_left, uint8_t* front_right, uint8_t* right);
+
 // Sets the calibration factor for the motors. Defualt is 1
 void oi_setMotorCalibration(double left, double right);
 
