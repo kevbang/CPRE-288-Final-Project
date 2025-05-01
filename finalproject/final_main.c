@@ -25,6 +25,18 @@
 #define MIN_WIDTH_CM 3
 #define MAX_WIDTH_CM 30
 
+// Music note frequencies from the Open Interface spec
+#define NOTE_G3  67
+#define NOTE_A3  69
+#define NOTE_B3  71
+#define NOTE_C4  72
+#define NOTE_D4  74
+#define NOTE_E4  76
+#define NOTE_F4  77
+#define NOTE_G4  79
+#define NOTE_A4  81
+#define NOTE_REST 0
+
 // Object structure
 typedef struct {
     int start_angle;
@@ -62,6 +74,22 @@ double get_average_ping_cm(int angle) {
         total+=distance;
     }
     return total/3.0;
+}
+
+// Load song onto cybot
+void load_cybot_songs(oi_t *sensor_data) {
+    // Song to play when we make it to the landing zone
+    unsigned char notes[16] = {
+        NOTE_C4, NOTE_C4, NOTE_C4, NOTE_C4, NOTE_G4, NOTE_G4, NOTE_E4, NOTE_E4,
+        NOTE_G4, NOTE_REST, NOTE_G4, NOTE_C4, NOTE_G4, NOTE_E4, NOTE_C4, NOTE_G4
+    };
+    
+    unsigned char durations[16] = {
+        12, 12, 12, 20, 20, 20, 20, 20,
+        32, 10, 20, 20, 20, 20, 20, 32
+    };
+    // Load song onto cybot
+    oi_loadSong(0, 16, notes, durations);
 }
 
 #define BUF_SIZE  3 // Set up to only take 2 digits
@@ -113,6 +141,7 @@ void display_commands() {
     uart_sendStr("\r\nList of commands:\r\n"
                  "g: initiate scan\r\n"
                  "s: interrupt scan\r\n"
+                 "m: play victory tune\r\n"
                  "\r\n"
                  "Set Movement:\r\n"
                  "w: forward 10 cm\r\n"
@@ -136,6 +165,9 @@ void display_commands() {
 
     oi_t* sensor_data = oi_alloc();
     oi_init(sensor_data);
+    
+    // Load songs into robot's memory
+    load_cybot_songs(sensor_data);
 
     lcd_puts("Ready to drive");
     uart_sendStr("\r\nReady... Press g to scan. Press h for help\r\n");
@@ -158,6 +190,11 @@ void display_commands() {
                 uart_sendStr("\r\nManual Stop Triggered.\r\n");
                 lcd_clear();
                 lcd_puts("Scan stopped");
+            } else if (cmd == 'm') {
+                uart_sendStr("\r\nPlaying victory tune...\r\n");
+                lcd_clear();
+                lcd_puts("Victory!");
+                oi_play_song(0); // Play the victory song (index 0)
             } else if (cmd == 'w') {
                 uart_sendStr("\r\nMoving forward 10cm\r\n");
                 lcd_clear();

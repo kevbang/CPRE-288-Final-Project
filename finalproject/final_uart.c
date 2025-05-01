@@ -122,7 +122,7 @@ void UART1_Handler(void) {
             byte_received == '0' || byte_received == '1' || byte_received == '2' ||
             byte_received == '3' || byte_received == '4'  || byte_received == '5' ||
             byte_received == '6' || byte_received == '7'  || byte_received == '8' ||
-            byte_received == '9'
+            byte_received == '9' || byte_received == 'm'
             ) {
             command_byte = byte_received;
             command_flag = 1;

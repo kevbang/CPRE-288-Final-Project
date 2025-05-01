@@ -42,21 +42,21 @@ bool check_hazards(oi_t *sensor) {
         return true;
     }
 
-    // cliff stuff
+    // Landing zone stuff, we could stop at the landing zone and then go forawrd a certain distance to a "safe spot"
 
     if(tape_sens_left < CLIFF_THRESHOLD || tape_left < CLIFF_THRESHOLD) {
         oi_setWheels(0, 0);
         lcd_clear();
-        lcd_puts("Cliff detected");
-        uart_sendStr("\r\nCliff left side, back up\r\n");
+        lcd_puts("Landing zone detected");
+        uart_sendStr("\r\Landing zone left side\r\n");
         return true;
     }
 
     if(tape_sens_right < CLIFF_THRESHOLD || tape_right < CLIFF_THRESHOLD) {
         oi_setWheels(0, 0);
         lcd_clear();
-        lcd_puts("Cliff detected");
-        uart_sendStr("\r\nCliff right side, back up\r\n");
+        lcd_puts("Landing zone detected");
+        uart_sendStr("\r\nLanding zone right side\r\n");
         return true;
     }
 
