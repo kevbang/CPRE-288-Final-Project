@@ -10,6 +10,14 @@
 #define TAPE_THRESHOLD 2600
 #define CLIFF_THRESHOLD 500
 
+// Might need redefining for more busy area, but doubting it
+#define MAX_OBJECTS 15
+#define IR_THRESHOLD_CM 45
+#define MIN_WIDTH_CM 3
+#define MAX_WIDTH_CM 30
+
+object_t detected_objects[MAX_OBJECTS];
+
 int right_calibration_value = 285250;
 int left_calibration_value = 1256500;
 
@@ -33,7 +41,7 @@ void scan(int angle, cyBot_Scan* getScan) {
 
         float distance1 = ping_getDistance(time_diff, &ms);
         float distance2 = ping_getDistance(time_diff, &ms);
-        getScan->sound_dist = (distance1 + distance2) / 2;  // PING sensor
+        getScan->sound_dist = (distance1 + distance2) / 2.0;  // PING sensor
         timer_waitMillis(500);
         update_flag = 0;
     }
@@ -43,6 +51,9 @@ void scan(int angle, cyBot_Scan* getScan) {
 
 void scanFullForObjects(void) {
     cyBot_Scan scanner;
+    int object_count = 0; // Keep track of object number
+    bool object_found = false;
+    int start = 0;
 
     uart_sendStr("Starting full sweep...\r\n");
     timer_waitMillis(20);
@@ -56,11 +67,63 @@ void scanFullForObjects(void) {
         snprintf(msg, sizeof(msg), "Angle: %d deg, IR: %.2f cm, Ping: %.2f cm\r\n",
                  angle, ir_cm, scanner.sound_dist);
         uart_sendStr(msg);
+        
+        /**
+         * Object detection logic that uses IR sensor thresholds and max/min width thresholds to determine objects
+         */
+        if (ir_cm <= IR_THRESHOLD_CM && !object_found) {
+            object_found = true;
+            start = angle;
+        } else if ((ir_cm > IR_THRESHOLD_CM || angle == 180) && object_found) {
+            object_found = false;
+            int end = angle;
+            int mid = (start + end) / 2;
+
+            scan(mid, &scanner);
+            double ping_dist = scanner.sound_dist;
+            ir_cm = 157000.0 * pow(scanner.IR_raw_val, -1.176);
+            int delta_angle = end - start;
+            double width = 2 * ping_dist * tan((delta_angle * M_PI / 180.0) / 2);
+
+            if (width >= MIN_WIDTH_CM && width <= MAX_WIDTH_CM && object_count < MAX_OBJECTS) {
+                object_t obj;
+                obj.start_angle = start;
+                obj.end_angle = end;
+                obj.avg_angle = mid;
+                obj.ping_distance = ping_dist;
+                obj.ir_distance_avg = ir_cm;
+                obj.width_cm = width;
+                detected_objects[object_count++] = obj;
+            }
+        }
 
         timer_waitMillis(20);
     }
 
     uart_sendStr("\r\nFull sweep complete.\r\n");
+
+    // If we have no objects, display no objects
+    if (object_count == 0) {
+        uart_sendStr("\r\nNo valid object detected.\r\n");
+        lcd_clear();
+        lcd_puts("No object");
+        return;
+    } else { // Let the user know how many objects we got
+        uart_sendStr("\r\n%d valid object detected.\r\n",
+        object_count);
+    }
+
+    int i;
+    char summary[128];
+    for (i = 0; i < object_count; i++) { // Changed to 0 because otherwise it would skip the first object
+        sprintf(summary, "\r\nObject #%d Angle: %d Ping: %.2f cm IR: %.2f cm Width: %.2f cm\r\n",
+            i+1,
+            detected_objects[i].avg_angle,
+            detected_objects[i].ping_distance,
+            detected_objects[i].ir_distance_avg,
+            detected_objects[i].width_cm);
+        uart_sendStr(summary);
+    }
 }
 
 bool checkBumpOrCliffDuringMove(oi_t* sensor_data) {
