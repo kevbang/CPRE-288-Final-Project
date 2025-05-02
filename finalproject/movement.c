@@ -84,19 +84,13 @@ bool check_hazards(oi_t *sensor) {
 }
 
 bool check_back_hazards(oi_t *sensor) {
-//    uint16_t tape_sens_left = sensor->cliffFrontLeftSignal;
-//    uint16_t tape_sens_right = sensor->cliffFrontRightSignal;
     uint16_t tape_left = sensor->cliffLeftSignal;
     uint16_t tape_right = sensor->cliffRightSignal;
 
     char buffer[25];
 
-//    sprintf(buffer, "\r\nFront Left: %d\r\n", tape_sens_left);
-//    uart_sendStr(buffer);
     sprintf(buffer, "Left: %d\r\n", tape_left);
     uart_sendStr(buffer);
-//    sprintf(buffer, "\r\nFront Right: %d\r\n", tape_sens_right);
-//    uart_sendStr(buffer);
     sprintf(buffer, "Left: %d\r\n", tape_right);
     uart_sendStr(buffer);
 
