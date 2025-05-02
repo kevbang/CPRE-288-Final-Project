@@ -48,7 +48,7 @@ bool check_hazards(oi_t *sensor) {
         oi_setWheels(0, 0);
         lcd_clear();
         lcd_puts("Landing zone detected");
-        uart_sendStr("\r\Landing zone left side\r\n");
+        uart_sendStr("\r\nLanding zone left side\r\n");
         return true;
     }
 
