@@ -13,17 +13,28 @@ int right_calibration_value = 285250;
 int left_calibration_value = 1256500;
 
 void scan_init(void) {
-    servo_init();
     ping_init();
     adc_init();
+    servo_init();
 }
 
 void scan(int angle, cyBot_Scan* getScan) {
     servo_move(angle);
     timer_waitMillis(20);
 
-    getScan->sound_dist = ping_getDistance();  // PING sensor
-    getScan->IR_raw_val = adc_read();          // IR sensor raw value
+    unsigned long time_diff;
+    float ms;
+    ping_trigger();
+    timer_waitMillis(2);//take a measurement every 500 ms
+    if(update_flag >= 2) {
+        uart_sendStr("RAH");
+        time_diff = last_time - current_time;
+        getScan->sound_dist = ping_getDistance(time_diff, &ms);  // PING sensor
+        timer_waitMillis(500);
+        update_flag = 0;
+    }
+     getScan->IR_raw_val = adc_read();  // IR sensor raw value
+
 }
 
 void scanFullForObjects(void) {
@@ -34,6 +45,7 @@ void scanFullForObjects(void) {
 
     int angle;
     for (angle = 0; angle <= 180; angle += 2) {
+        uart_sendStr("yo");
         scan(angle, &scanner);
         double ir_cm = 157000.0 * pow(scanner.IR_raw_val, -1.176);
 
@@ -63,3 +75,14 @@ bool checkBumpOrCliffDuringMove(oi_t* sensor_data) {
 
     return false;
 }
+
+/**
+ * This function is used to scan while moving.
+ */
+void idleScan(void) {
+    uart_sendStr("This is idle scan");
+
+
+}
+
+

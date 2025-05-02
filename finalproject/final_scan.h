@@ -8,6 +8,7 @@ typedef struct {
 
 void scan_init(void);                   // Initializes servo, ping, and IR
 void scan(int angle, cyBot_Scan* getScan);  // Scans at an angle, fills struct
+void idleScan(void);
 
 extern int right_calibration_value;
 extern int left_calibration_value;

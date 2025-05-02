@@ -53,28 +53,28 @@ bool scan_active = false;
 bool autonomous_mode = false;
 
 // Changed to do 2 scans
-double get_average_ping_cm(int angle) {
-    double total = 0;
-    int i;
-
-    // Need a longer wait time when moving to 0
-    if (angle == 0) {
-        servo_move(angle); // Move scanner to 0 degrees
-        timer_waitMillis(1000); // Wait for scanner to move
-    }
-    else {
-        servo_move(angle); //Move scanner to angle
-        timer_waitMillis(100); // Wait for scanner to move
-    }
-    for (i = 0; i < 2; i++) {
-        float distance = ping_getDistance();
-        // Add error handling check for an invalid return
-        if(distance < 0)
-            return 999.0f;
-        total+=distance;
-    }
-    return total/3.0;
-}
+//double get_average_ping_cm(int angle) {
+//    double total = 0;
+//    int i;
+//
+//    // Need a longer wait time when moving to 0
+//    if (angle == 0) {
+//        servo_move(angle); // Move scanner to 0 degrees
+//        timer_waitMillis(1000); // Wait for scanner to move
+//    }
+//    else {
+//        servo_move(angle); //Move scanner to angle
+//        timer_waitMillis(100); // Wait for scanner to move
+//    }
+//    for (i = 0; i < 2; i++) {
+//        float distance = ping_getDistance();
+//        // Add error handling check for an invalid return
+//        if(distance < 0)
+//            return 999.0f;
+//        total+=distance;
+//    }
+//    return total/3.0;
+//}
 
 // Load song onto cybot
 void load_cybot_songs(oi_t *sensor_data) {
@@ -273,7 +273,16 @@ void display_commands() {
                 turn(sensor_data, -custom_input);
             } else if (cmd == 'h') { // Display list of commands
                 display_commands(); 
-            } else {
+            } else if (cmd == 'p'){
+                /*
+                 * move and scan
+                 */
+
+                idleScan();
+
+
+            }
+                else {
                 uart_sendStr("\r\nUnknown command.\r\n");
             }
             uart_sendStr("\r\nPlease enter your next command\r\n"); // Default message that tells user the Cybot is ready for next command

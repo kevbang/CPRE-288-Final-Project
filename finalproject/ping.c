@@ -6,149 +6,116 @@
 
 #include "ping.h"
 #include "Timer.h"
-
+#include "final_uart.h"
 // Global shared variables
 // Use extern declarations in the header file
-
+volatile unsigned long last_time = 0;//rising edge
+volatile unsigned long current_time = 0;//falling edge
+volatile int update_flag = 0;
 volatile uint32_t g_start_time = 0;
 volatile uint32_t g_end_time = 0;
 volatile enum{LOW, HIGH, DONE} g_state = LOW; // State of ping echo pulse
 
 
 void ping_init (void){
+    //init gpio
+    SYSCTL_RCGCGPIO_R |= 0x2;
+    while ((SYSCTL_PRGPIO_R & 0x2) == 0); //wait for portB to turn on
+    GPIO_PORTB_DIR_R |= 0x8; //pb3 is output
+    GPIO_PORTB_AFSEL_R &= ~0x8; //pb3 is not alt input
+    GPIO_PORTB_PCTL_R &= ~0x7000; //pb3 is not a clk signal
+    GPIO_PORTB_DEN_R |= 0x8; //enable digital on pb3
+    SYSCTL_RCGCTIMER_R |= 0x8; //turn on system clk
+    while ((SYSCTL_PRTIMER_R & 0x8) == 0)
+        ; //wait until timer 3 turns on
 
-  // YOUR CODE HERE
+    TIMER3_CTL_R &= ~0x100;//disable timer 3b
+    TIMER3_CFG_R |= 0x4;//make all timers 16bit
+    TIMER3_TBMR_R |=0x7;//enable capture mode and edge time mode
+    TIMER3_CTL_R |= 0xC00;//configure event type for pos and neg timer captures
+    TIMER3_TBILR_R = 0xFFFF;//gives us a 24bit timer
+    TIMER3_TBPR_R = 0xFF;//gives us a 24bit timer
+    TIMER3_TBMR_R &= ~0x10;//force count down
+    TIMER3_ICR_R = 0x400;//clear capture mode event interupt
+    TIMER3_IMR_R |= 0x400;//enables interupts from timerB capture mode event
 
-    /*
-     * much of these values are in the Tm4c header file btw
-     */
+    //INTERUPT HANDLER
+    //NVIC setup: set priority of timer 3b interrupt to 1
+      NVIC_PRI9_R = (NVIC_PRI9_R & 0xFFFFFF1F) | 0x20;
 
-    // enable clock Timer 3
-    SYSCTL_RCGCTIMER_R |= SYSCTL_RCGCTIMER_R3;
-    // enable I/O register for Port B
-    SYSCTL_RCGCGPIO_R |= SYSCTL_RCGCGPIO_R1;
+      //NVIC setup: enable interrupt for timer3b
+      NVIC_EN1_R |= 0x10;
 
-    while((SYSCTL_PRTIMER_R & SYSCTL_PRTIMER_R3) == 0) {};
-    while((SYSCTL_PRGPIO_R & SYSCTL_PRGPIO_R1) == 0) {};
-
-    // Enabling the alternate function on pin PB3
-    GPIO_PORTB_AFSEL_R |= (1 << 3);
-
-    GPIO_PORTB_PCTL_R &= ~GPIO_PCTL_PB3_M; // clear PCTL register
-
-    //Set PB3 to T3CCP1 timer
-    GPIO_PORTB_PCTL_R |= GPIO_PCTL_PB3_T3CCP1;
-
-    GPIO_PORTB_DEN_R |= (1 << 3); // enabling  digital on PB3
-    GPIO_PORTB_DIR_R &= ~(1 << 3); // set PB3 as input.
-
-    // According to Bai book (9.2.6.3):
-
-    TIMER3_CTL_R &= ~TIMER_CTL_TBEN; // disable the timer before configuration
-    TIMER3_CFG_R = TIMER_CFG_16_BIT; // set as a 16-bit timer. We will end up adding another 8 bits later.
-
-    //capture mode, edge time mode, and count direction ( down )
-    TIMER3_TBMR_R = TIMER_TBMR_TBMR_CAP | TIMER_TBMR_TBCMR | TIMER_TBMR_TBCDIR;
-    TIMER3_CTL_R = TIMER_CTL_TBEVENT_BOTH;
-    TIMER3_TBPR_R = 0xFF; // 8 bit max value (prescale value) GIVEN
-    TIMER3_TBILR_R = 0xFFFF; // GIVEN
-
-    TIMER3_IMR_R |= TIMER_IMR_CBEIM;
-    TIMER3_ICR_R = TIMER_ICR_CBECINT; // clear interrupt
-    TIMER3_CTL_R = TIMER_CTL_TBEN; // enable timer 3b
-
-    IntRegister(INT_TIMER3B, TIMER3B_Handler);
-    IntEnable(INT_TIMER3B);
-    IntMasterEnable();
-
+      //tell CPU to use ISR handler for UART1 (see interrupt.h file)
+      //from system header file: #define INT_UART1 22
+      IntRegister(INT_TIMER3B, Timer3b_Handler);
+      TIMER3_CTL_R |= 0x100;//enable timer 3b
+      //globally allow CPU to service interrupts (see interrupt.h file)
+      IntMasterEnable();
 }
 
 
 
-void ping_trigger (void){
-    g_state = LOW;
-    // Disable timer and disable timer interrupt
-    TIMER3_CTL_R &= ~TIMER_CTL_TBEN;
-    TIMER3_IMR_R &= ~TIMER_IMR_CBEIM;
-    // Disable alternate function (disconnect timer from port pin)
-    GPIO_PORTB_AFSEL_R &= ~(1 << 3);
-    GPIO_PORTB_DIR_R |= (1 << 3);
-    GPIO_PORTB_DEN_R |= (1 << 3);
 
+/**
+ * turns on the PING sensor
+ */
+void ping_trigger (void) {
+    TIMER3_CTL_R &= ~0x100;//enable timer 3b
+    GPIO_PORTB_DIR_R |= 0x8; //pb3 is output
+    GPIO_PORTB_AFSEL_R &= ~0x8;//pb3 is not alt input
 
-    GPIO_PORTB_DATA_R &= ~(1 << 3); // set to low (0)
-    //timer_waitMillis(200);
-    timer_waitMicros(2); //wait 2 micro sec
-    GPIO_PORTB_DATA_R |= (1 << 3); // set back to high (1)
-    timer_waitMicros(10); //wait 10 micro sec
-    GPIO_PORTB_DATA_R &= ~(1 << 3); // set back to low
+    //send low-high-low starting pulse
 
-    GPIO_PORTB_DIR_R &= ~(1 << 3);
-    GPIO_PORTB_AFSEL_R |= (1 << 3);
-    GPIO_PORTB_PCTL_R &= ~(0xF << 12); //clear pctl for PB3
-    GPIO_PORTB_PCTL_R |= (0x07 << 12); // set PCTL to T3CCP1
-    GPIO_PORTB_DEN_R |= (1 << 3);
+    GPIO_PORTB_DATA_R &= ~0x8;//turn pb3 on low
+    timer_waitMicros(5);//wait 5 micro sec
+    GPIO_PORTB_DATA_R |= 0x8;//turn pb3 on high
+    timer_waitMicros(5);//wait 5 micro sec
+    GPIO_PORTB_DATA_R &= ~0x8;//turn pb3 on low
 
-    // Clear an interrupt that may have been erroneously triggered
-    TIMER3_ICR_R = TIMER_IMR_CBEIM;
-    // Re-enable alternate function, timer interrupt, and timer
-
-    TIMER3_IMR_R |= TIMER_IMR_CBEIM;
-    TIMER3_CTL_R |= TIMER_CTL_TBEN;
+    //reconfig pb3 for input
+    GPIO_PORTB_AFSEL_R |= 0x8;//pb3 is an alt input
+    GPIO_PORTB_PCTL_R |= 0x7000;//pb3 is a clk signal
+    TIMER3_CTL_R |= 0x100;//enable timer 3b
 }
 
-void TIMER3B_Handler(void){
-  // Check if timer3b caused the interrupt
-  if(TIMER3_MIS_R & 0x400)
-  {
-      // Clear the interrupt flag
-      TIMER3_ICR_R |= 0x400;
-      // If state is low, read timer val on rising edge and set state to await falling edge
-      if (g_state == LOW)
-      {
-        g_start_time = TIMER3_TBR_R;
-        g_state = HIGH;
-      }
-      else if(g_state == HIGH) // If state is high, read timer val on falling edge and set state to done
-      {
-        g_end_time = TIMER3_TBR_R;
-        g_state = DONE;
-      }
-  }
+float ping_getDistance (unsigned long raw, float* ms) {
+    //calculate distance
+    float temp = (float)raw;
+    temp /= 2;
+    temp /= 16000.0;//temp is now in ms
+    *ms = temp;
+    temp *= 34.3;//temp is now in centimeters
+    return temp;
+}
+/**
+ * handles the interrupts from timer 3b
+ */
+void Timer3b_Handler(void)
+{
+        //byte was received in the UART data register
+        //clear the RX trigger flag (clear by writing 1 to ICR)
+        last_time = current_time;
+        current_time = TIMER3_TBR_R;
+        update_flag++;
+        TIMER3_ICR_R |= 0x400;
 }
 
-float ping_getDistance (void){
+float ping_getData() {
+    unsigned long time_diff;
+        float dist;
+        float ms;
+        int overflow = 0;
+        while(1) {
+            ping_trigger();
+            timer_waitMillis(2);//take a measurement every 500 ms
+            if(update_flag >= 2) {
+                time_diff = last_time - current_time;
+                dist = ping_getDistance(time_diff, &ms);
+                timer_waitMillis(500);//take a measurement every 500 ms
+                update_flag = 0;
+                return dist;
+            }
 
-  unsigned long time_diff = 0;
-  float distance = 0;
-
-  uint8_t overflow = 0;
-
-  int timeout = 0;
-  const int TIMEOUT_THRESHOLD = 800000;
-  // Send trigger to start capture sequence
-  ping_trigger();
-
-  // Only move after both edges of interrupt
-  // Added a timeout and a timeout threshold to handle the case where a missed echo will result in an infinite wait
-  while(g_state != DONE && timeout++ < TIMEOUT_THRESHOLD){};
-
-  if(timeout >= TIMEOUT_THRESHOLD)
-      return -1.0f;
-
-
-  // Check for overflow, if end time > start time the timer has wrapped
-  overflow = g_end_time > g_start_time;
-
-  // Total tick difference, include one wrap if there was overflow
-  time_diff = (g_start_time - g_end_time) + ((unsigned long ) overflow << 24);
-
-  //distance = time_diff * 6.25e-8 *343 * 100 / 2; (Can remove, this is too confusing to read)
-
-  const float time = time_diff / 16000000.0f; // ticks to seconds
-  const float round_trip_time = time * 343.0f; // sound round trip travel dist in meters
-  const float meters = round_trip_time / 2.0f; // one way distance in meters
-  distance = meters * 100.0f; // convert to cm
-
-  return distance;
+        }
 }
