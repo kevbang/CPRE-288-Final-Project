@@ -7,7 +7,7 @@
 #include "open_interface.h"
 #include "final_uart.h"
 
-#define TAPE_THRESHOLD 2700
+#define TAPE_THRESHOLD 2600
 #define CLIFF_THRESHOLD 500
 
 int right_calibration_value = 285250;
@@ -69,9 +69,16 @@ bool checkBumpOrCliffDuringMove(oi_t* sensor_data) {
     uint8_t cliffLeft, cliffFrontLeft, cliffFrontRight, cliffRight;
     oi_readCliffSensors(&cliffLeft, &cliffFrontLeft, &cliffFrontRight, &cliffRight);
 
+    if (cliffLeft > TAPE_THRESHOLD || cliffFrontLeft > TAPE_THRESHOLD ||
+        cliffFrontRight > TAPE_THRESHOLD || cliffRight > TAPE_THRESHOLD) {
+        uart_sendStr("\r\nTape detected! Stopping...\r\n");
+        oi_setWheels(0, 0);
+        return true;
+    }
+
     if (cliffLeft < CLIFF_THRESHOLD || cliffFrontLeft < CLIFF_THRESHOLD ||
         cliffFrontRight < CLIFF_THRESHOLD || cliffRight < CLIFF_THRESHOLD) {
-        uart_sendStr("\r\nCliff or tape detected! Stopping...\r\n");
+        uart_sendStr("\r\nDestination Zone detected! Stopping...\r\n");
         oi_setWheels(0, 0);
         return true;
     }
