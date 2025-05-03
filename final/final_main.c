@@ -151,29 +151,42 @@ void auto_park(oi_t *sensor) {
             oi_setWheels(0, 0);
             break;
         }
-
-        // turn right if the left cliff sensor is on tape and
-        if((sensor->cliffFrontLeftSignal || sensor->cliffLeftSignal < 500) && (sensor->cliffRightSignal > 1000 || sensor->cliffFrontRightSignal)) {
-            timer_waitMillis(500);
-            turn(sensor, -10);
-        }
-
-        if((sensor->cliffFrontRightSignal || sensor->cliffRightSignal < 500) && (sensor->cliffLeftSignal > 1000 || sensor->cliffFrontLeftSignal)) {
-            timer_waitMillis(500);
-            turn(sensor, -10);
-        }
-
-
+//
+//        if(sensor->cliffLeftSignal < 500 && sensor->cliffRightSignal > 1000) {
+//            turn(sensor, 15);
+//            continue;
+//        }
+//
+//        if(sensor->cliffRightSignal < 500 && sensor->cliffLeftSignal > 1000) {
+//            turn(sensor, -15);
+//            continue;
+//        }
+//
+//        if(sensor-> cliffFrontLeftSignal < 500 && sensor->cliffFrontRightSignal > 1000) {
+//            turn(sensor, 15);
+//            continue;
+//        }
+//
+//        if(sensor-> cliffFrontRightSignal < 500 && sensor->cliffFrontLeftSignal > 1000) {
+//            turn(sensor, -15);
+//            continue;
+//        }
+//
+//        if(sensor-> cliffLeftSignal < 500 && sensor->cliffFrontLeftSignal > 1000) {
+//            turn(sensor, 30);
+//            continue;
+//        }
     }
 
 
     // back up and rotate
-//    while (backwards_distance <= 5) {
-//        timer_waitMillis(100);
-//        backwards_distance += move_backwards(sensor, 1);
-//    }
-//    move_backwards(sensor, 00);
-//    turn(sensor, 90);
+    while (backwards_distance <= 5) {
+        timer_waitMillis(100);
+        backwards_distance += move_backwards(sensor, 1);
+    }
+    move_backwards(sensor, 00);
+    turn(sensor, 90);
+    oi_play_song(1);
 
 }
 
