@@ -123,70 +123,113 @@ void checkAndDriveToCliff(oi_t *sensor_data) {
 
 void auto_park(oi_t *sensor) {
     oi_update(sensor); // clear data
-
+    bool inside_parking = false;
+    bool exiting = false; // flag to determine if we're exiting a hole
     double forward_distance = 0;
     double backwards_distance = 0;
 
     // go into the black hole
-    while(sensor->cliffFrontLeftSignal < 500 || sensor->cliffFrontRightSignal < 500 || sensor->cliffLeftSignal < 500 || sensor->cliffRightSignal < 500) {
-        move_forward(sensor, 100);
+    while(!inside_parking) {
+
+        park_forward(sensor, 30);
         oi_update(sensor);
 
-        if (sensor->cliffFrontLeftSignal > 1000 || sensor-> cliffFrontRightSignal > 1000 || sensor->cliffLeftSignal > 1000 || sensor->cliffRightSignal > 1000) {
-        uart_sendStr("We should be in the black hole");
+        if(check_bumpers(sensor)) {
+            uart_sendStr("Bumper pressed!!!");
+            oi_setWheels(0,0);
+            break;
         }
 
+        char debug[100];
+           sprintf(debug, "\r\nFL: %d | L: %d | FR: %d | R: %d\r\n",
+                   sensor->cliffFrontLeftSignal,
+                   sensor->cliffLeftSignal,
+                   sensor->cliffFrontRightSignal,
+                   sensor->cliffRightSignal);
+        uart_sendStr(debug);
+
+        if (sensor->cliffFrontLeftSignal > 900 &&  sensor-> cliffFrontRightSignal > 900 && sensor->cliffLeftSignal > 900 && sensor->cliffRightSignal > 900) {
+            uart_sendStr("\r\nWe are in the black hole.");
+            inside_parking = true;
+        }
     }
 
     timer_waitMillis(2000);
 
-    // drive through the black hole until we detect more black tape
-    while (sensor->cliffFrontRightSignal > 500 || sensor->cliffFrontLeftSignal > 500) {
-        timer_waitMillis(25);
-        move_forward(sensor, 200);
-        oi_update(sensor);
+    if(inside_parking) {
+        uart_sendStr("\r\nWould you like to auto align?");
+        while((sensor->cliffFrontLeftSignal > 500) && (sensor->cliffLeftSignal > 500) && (sensor->cliffFrontRightSignal > 500) && (sensor->cliffRightSignal > 500))
+        {
+            if(check_bumpers(sensor)) {
+                uart_sendStr("\r\nThis is not the destination! Object detected inside of parking garage!!!");
+                oi_setWheels(0,0);
+                uart_sendStr("\r\n Getting out of here!");
+                exiting = true;
+                while (backwards_distance <= forward_distance) {
+                    backwards_distance += park_backwards(sensor, 5);
+                }
+                break;
+            }
 
-        // break if both sensors detect black
-        if(sensor->cliffFrontRightSignal < 500 || sensor->cliffFrontLeftSignal < 500) {
-            oi_setWheels(0, 0);
-            break;
+            if (!exiting) {
+              uart_sendStr("\r\n Going to opposite side....");
+              forward_distance += park_forward(sensor, 35);
+            }
+
+
         }
-//
-//        if(sensor->cliffLeftSignal < 500 && sensor->cliffRightSignal > 1000) {
-//            turn(sensor, 15);
-//            continue;
-//        }
-//
-//        if(sensor->cliffRightSignal < 500 && sensor->cliffLeftSignal > 1000) {
-//            turn(sensor, -15);
-//            continue;
-//        }
-//
-//        if(sensor-> cliffFrontLeftSignal < 500 && sensor->cliffFrontRightSignal > 1000) {
-//            turn(sensor, 15);
-//            continue;
-//        }
-//
-//        if(sensor-> cliffFrontRightSignal < 500 && sensor->cliffFrontLeftSignal > 1000) {
-//            turn(sensor, -15);
-//            continue;
-//        }
-//
-//        if(sensor-> cliffLeftSignal < 500 && sensor->cliffFrontLeftSignal > 1000) {
-//            turn(sensor, 30);
-//            continue;
-//        }
+
+        // if no object has been detected inside the parking zone, then try to align.
+        if(!check_bumpers(sensor) && !exiting) {
+            uart_sendStr("\r\n*Moving backwards*");
+            timer_waitMillis(1000);
+            park_backwards(sensor, 120);
+
+            uart_sendStr("\r\n*Turning right");
+            timer_waitMillis(500);
+            turn(sensor, 90);
+
+        }
+        else {
+            uart_sendStr("\r\n Getting out of here!");
+            while (backwards_distance <= forward_distance) {
+                backwards_distance += park_backwards(sensor, 5);
+            }
+        }
+
+        timer_waitMillis(250);
+        while((sensor->cliffFrontLeftSignal > 500) && (sensor->cliffLeftSignal > 500) && (sensor->cliffFrontRightSignal > 500) && (sensor->cliffRightSignal > 500))
+        {
+            if(check_bumpers(sensor) || exiting) {
+                uart_sendStr("\r\nThis is not the destination! Object detected inside of parking garage!!!");
+                oi_setWheels(0,0);
+                break;
+            }
+
+            if(!check_bumpers(sensor) && !exiting) {
+                uart_sendStr("\r\n Going to opposite side...");
+                park_forward(sensor, 35);
+            }
+
+        }
+
+        if(!check_bumpers(sensor) && !exiting) {
+            uart_sendStr("\r\n **ALIGNING**");
+            park_backwards(sensor, 120);
+        }
+
+
     }
 
 
     // back up and rotate
-    while (backwards_distance <= 5) {
-        timer_waitMillis(100);
-        backwards_distance += move_backwards(sensor, 1);
-    }
-    move_backwards(sensor, 00);
-    turn(sensor, 90);
-    oi_play_song(1);
+//    while (backwards_distance <= 5) {
+//        timer_waitMillis(100);
+//        backwards_distance += move_backwards(sensor, 1);
+////    }
+//    move_backwards(sensor, 00);
+//    turn(sensor, 90);
+//    oi_play_song(1);
 
 }
 

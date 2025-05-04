@@ -149,6 +149,26 @@ bool check_back_hazards(oi_t *sensor) {
     return false;
 }
 
+bool check_bumpers(oi_t *sensor) {
+
+
+    if (sensor->bumpLeft) { // Check for bump on left side, stop and display message if bump
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Object bumped left");
+        uart_sendStr("\r\nObject bumped left side, back up\r\n");
+        return true;
+    }
+    if (sensor->bumpRight) { // Check for bump on right side, stop and display message if bump
+        oi_setWheels(0, 0);
+        lcd_clear();
+        lcd_puts("Object bumped right");
+        uart_sendStr("\r\nObject bumped right side, back up\r\n");
+        return true;
+    }
+    return false;
+}
+
 // Move forward and stop if bump is detected
 double move_forward(oi_t *sensor, double distance_mm) {
     double sum = 0;
@@ -164,6 +184,38 @@ double move_forward(oi_t *sensor, double distance_mm) {
     oi_setWheels(0, 0); // Stop the robot
     return sum;
 }
+
+
+// Move forward into the parking spot
+double park_forward(oi_t *sensor, double distance_mm) {
+    double sum = 0;
+    oi_update(sensor); // Clear old data
+    oi_setWheels(100, 100); // Set wheel speed forward
+
+    while (sum < distance_mm) {
+        oi_update(sensor);
+        sum += sensor->distance;
+    }
+    oi_setWheels(0, 0); // Stop the robot
+    return sum;
+}
+
+// move backward in the parking spot
+double park_backwards(oi_t *sensor, double distance_mm) {
+    double sum = 0;
+    oi_update(sensor); // Clear old data
+    oi_setWheels(-100, -100); // Set wheel speed backward
+
+    while (sum < distance_mm) {
+        oi_update(sensor);
+        sum += fabs(sensor->distance);
+
+    }
+
+    oi_setWheels(0, 0);
+    return sum;
+}
+
 
 // Move backward
 double move_backwards(oi_t *sensor, double distance_mm) {
