@@ -222,14 +222,7 @@ void auto_park(oi_t *sensor) {
     }
 
 
-    // back up and rotate
-//    while (backwards_distance <= 5) {
-//        timer_waitMillis(100);
-//        backwards_distance += move_backwards(sensor, 1);
-////    }
-//    move_backwards(sensor, 00);
-//    turn(sensor, 90);
-//    oi_play_song(1);
+
 
 }
 
