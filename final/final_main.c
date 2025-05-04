@@ -16,7 +16,7 @@
 #define MAX_OBJECTS 10
 #define BUF_SIZE  5
 #define PI 3.14159265359
-#define CLIFF_DETECTION_THRESHOLD 500
+#define CLIFF_DETECTION_THRESHOLD 300
 
 object_t detected_objects[MAX_OBJECTS];
 int object_count = 0;
@@ -102,6 +102,14 @@ void checkAndDriveToCliff(oi_t *sensor_data) {
 
     int result = checkBumpOrCliffDuringMove(sensor_data);
     if (result == 2) {
+
+        sprintf(debug, "FL: %d | L: %d | FR: %d | R: %d\r\n",
+            sensor_data->cliffFrontLeftSignal,
+            sensor_data->cliffLeftSignal,
+            sensor_data->cliffFrontRightSignal,
+            sensor_data->cliffRightSignal);
+        uart_sendStr(debug);
+
         oi_setWheels(0,0);
         uart_sendStr("\r\nBlack hole detected! Driving to center...\r\n");
         uart_sendStr("\r\n Press V to auto park.");
@@ -131,7 +139,7 @@ void auto_park(oi_t *sensor) {
     // go into the black hole
     while(!inside_parking) {
 
-        park_forward(sensor, 30);
+        park_forward(sensor, 60);
         oi_update(sensor);
 
         if(check_bumpers(sensor)) {
@@ -226,7 +234,7 @@ void auto_park(oi_t *sensor) {
 
 }
 
-int main(void) {
+    int main(void) {
     timer_init();
     lcd_init();
     uart_interrupt_init();
