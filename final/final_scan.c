@@ -8,7 +8,7 @@
 #include "final_uart.h"
 
 #define TAPE_THRESHOLD 2500
-#define CLIFF_THRESHOLD 500
+#define CLIFF_THRESHOLD 300
 
 // Might need redefining for more busy area, but doubting it
 #define MAX_OBJECTS 15
@@ -141,9 +141,9 @@ int checkBumpOrCliffDuringMove(oi_t* sensor_data) {
     }
 
     // Only detect black hole if sensors are below 500
-    if (cliffLeft < 500 || cliffFrontLeft < 500 ||
-        cliffFrontRight < 500 || cliffRight < 500) {
-        uart_sendStr("\r\nBlack hole detected!\r\n");
+    if (sensor_data->cliffLeftSignal < 300 || sensor_data->cliffFrontLeftSignal < 300 ||
+            sensor_data->cliffRightSignal < 300 || sensor_data->cliffFrontRightSignal < 300) {
+        uart_sendStr("\r\nBlack hole detected! wdad\r\n");
         oi_setWheels(0,0);
         return 2;
     }
@@ -205,5 +205,4 @@ void idleScan(void) {
     uart_sendStr(buffer);
 
 }
-
 
